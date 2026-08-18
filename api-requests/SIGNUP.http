@@ -1,0 +1,26 @@
+### Signup New Hotel & Owner
+POST http://localhost:8080/api/v1/auth/signup
+Content-Type: application/json
+
+{
+  "hotelName": "Grand Palace Hotel",
+  "ownerName": "Nagaraju",
+  "email": "nagaraju@gmail.com",
+  "password": "password123",
+  "phone": "9876543210",
+  "city": "Hyderabad",
+  "state": "Telangana",
+  "country": "India",
+  "postalCode": "500001"
+}
+
+### Signup Request with Missing Required Fields (Validation Failure Test)
+POST http://localhost:8080/api/v1/auth/signup
+Content-Type: application/json
+
+{
+  "hotelName": "",
+  "ownerName": "",
+  "email": "invalid-email",
+  "password": "123"
+}
