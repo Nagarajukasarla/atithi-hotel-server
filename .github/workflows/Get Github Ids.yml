@@ -1,0 +1,15 @@
+name: Get GitHub IDs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ids:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Show GitHub IDs
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "Owner ID: ${{ github.repository_owner_id }}"
+          echo "Repository ID: ${{ github.repository_id }}"
