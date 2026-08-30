@@ -1,4 +1,4 @@
-name: Test AWS OIDC
+name: Debug AWS OIDC
 
 on:
   workflow_dispatch:
@@ -8,18 +8,11 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  debug:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Debug OIDC Claims
+        uses: github/actions-oidc-debugger@main
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: us-east-1
-
-      - name: Check AWS identity
-        run: aws sts get-caller-identity
+          audience: sts.amazonaws.com
