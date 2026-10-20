@@ -7,6 +7,8 @@ import com.nag.atithi.models.RoomType;
 import com.nag.atithi.repositories.AmenityRepository;
 import com.nag.atithi.repositories.HotelRepository;
 import com.nag.atithi.repositories.RoomTypeRepository;
+import com.nag.atithi.repositories.RoomRepository;
+import com.nag.atithi.enums.RoomStatus;
 import com.nag.atithi.requests.RoomTypeRequest;
 import com.nag.atithi.responses.RoomTypeResponse;
 import com.nag.atithi.services.RoomTypeService;
@@ -17,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,12 +30,27 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     private final HotelRepository hotelRepository;
     private final RoomTypeRepository roomTypeRepository;
     private final AmenityRepository amenityRepository;
+    private final RoomRepository roomRepository;
 
     @Override
     @Transactional(readOnly = true)
     public List<RoomTypeResponse> getHotelRoomTypes(Long hotelId) {
-        return roomTypeRepository.findAllByHotelId(hotelId).stream()
-                .map(RoomTypeResponse::fromEntity)
+        List<RoomType> roomTypes = roomTypeRepository.findAllByHotelId(hotelId);
+        
+        List<Object[]> counts = roomRepository.countRoomsByRoomTypeAndStatus(hotelId, RoomStatus.VACANT);
+        Map<Long, int[]> countsMap = new HashMap<>();
+        for (Object[] row : counts) {
+            Long roomTypeId = (Long) row[0];
+            Long total = (Long) row[1];
+            Long active = (Long) row[2];
+            countsMap.put(roomTypeId, new int[]{active.intValue(), total.intValue()});
+        }
+
+        return roomTypes.stream()
+                .map(rt -> {
+                    int[] c = countsMap.getOrDefault(rt.getId(), new int[]{0, 0});
+                    return RoomTypeResponse.fromEntity(rt, c[0], c[1]);
+                })
                 .collect(Collectors.toList());
     }
 
@@ -54,6 +73,8 @@ public class RoomTypeServiceImpl implements RoomTypeService {
                 .status(RoomTypeStatus.valueOf(request.getStatus()))
                 .isPremium(request.getIsPremium() != null ? request.getIsPremium() : false)
                 .premiumType(Boolean.TRUE.equals(request.getIsPremium()) ? request.getPremiumType() : null)
+                .isHourly(request.getIsHourly() != null ? request.getIsHourly() : false)
+                .hourlyPrice(Boolean.TRUE.equals(request.getIsHourly()) ? request.getHourlyPrice() : null)
                 .build();
 
         if (request.getAmenityIds() != null && !request.getAmenityIds().isEmpty()) {
@@ -88,6 +109,15 @@ public class RoomTypeServiceImpl implements RoomTypeService {
             roomType.setPremiumType(request.getPremiumType());
         } else {
             roomType.setPremiumType(null); // Clean up if no longer premium
+        }
+
+        if (request.getIsHourly() != null) {
+            roomType.setIsHourly(request.getIsHourly());
+        }
+        if (Boolean.TRUE.equals(roomType.getIsHourly())) {
+            roomType.setHourlyPrice(request.getHourlyPrice());
+        } else {
+            roomType.setHourlyPrice(null); // Clean up if no longer hourly
         }
 
         if (request.getAmenityIds() != null) {

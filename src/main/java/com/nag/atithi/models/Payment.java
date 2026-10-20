@@ -33,6 +33,14 @@ public class Payment extends BaseEntity {
     @Column(name = "amount_paid", nullable = false)
     private Double amountPaid;
 
+    @Column(name = "cash_amount", nullable = false)
+    @Builder.Default
+    private Double cashAmount = 0.0;
+
+    @Column(name = "online_amount", nullable = false)
+    @Builder.Default
+    private Double onlineAmount = 0.0;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private PaymentStatus status;

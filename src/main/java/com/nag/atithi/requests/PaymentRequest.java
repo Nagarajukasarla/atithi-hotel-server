@@ -15,6 +15,10 @@ public class PaymentRequest {
     @NotNull(message = "Amount paid is required")
     private Double amountPaid;
 
+    private Double cashAmount;
+
+    private Double onlineAmount;
+
     @NotBlank(message = "Status is required")
     private String status;
 

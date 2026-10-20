@@ -69,7 +69,11 @@ public class RoomTypesControllerTestNGTest {
                 "ACTIVE",
                 List.of("wifi"),
                 true,
-                "FEMALE"
+                "FEMALE",
+                false,
+                null,
+                4,
+                12
         );
     }
 

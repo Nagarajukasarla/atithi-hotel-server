@@ -10,6 +10,7 @@ import com.nag.atithi.models.RoomType;
 import com.nag.atithi.repositories.AmenityRepository;
 import com.nag.atithi.repositories.HotelRepository;
 import com.nag.atithi.repositories.RoomTypeRepository;
+import com.nag.atithi.repositories.RoomRepository;
 import com.nag.atithi.requests.RoomTypeRequest;
 import com.nag.atithi.responses.RoomTypeResponse;
 import org.mockito.InjectMocks;
@@ -27,6 +28,7 @@ import java.util.*;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 public class RoomTypeServiceImplTestNGTest {
@@ -39,6 +41,9 @@ public class RoomTypeServiceImplTestNGTest {
 
     @Mock
     private AmenityRepository amenityRepository;
+
+    @Mock
+    private RoomRepository roomRepository;
 
     @InjectMocks
     private RoomTypeServiceImpl roomTypeService;
@@ -62,7 +67,7 @@ public class RoomTypeServiceImplTestNGTest {
 
     @BeforeMethod
     public void setUp() {
-        Mockito.reset(hotelRepository, roomTypeRepository, amenityRepository);
+        Mockito.reset(hotelRepository, roomTypeRepository, amenityRepository, roomRepository);
 
         sampleHotel = Hotel.builder()
                 .id(1L)
@@ -97,6 +102,7 @@ public class RoomTypeServiceImplTestNGTest {
     @Test
     public void testGetHotelRoomTypes() {
         when(roomTypeRepository.findAllByHotelId(1L)).thenReturn(List.of(sampleRoomType));
+        when(roomRepository.countRoomsByRoomTypeAndStatus(anyLong(), any())).thenReturn(List.of());
 
         List<RoomTypeResponse> responses = roomTypeService.getHotelRoomTypes(1L);
 
@@ -105,6 +111,7 @@ public class RoomTypeServiceImplTestNGTest {
         Assert.assertEquals(responses.get(0).name(), "Deluxe Room");
         Assert.assertTrue(responses.get(0).amenityIds().contains("wifi"));
         verify(roomTypeRepository, times(1)).findAllByHotelId(1L);
+        verify(roomRepository, times(1)).countRoomsByRoomTypeAndStatus(anyLong(), any());
     }
 
     @Test

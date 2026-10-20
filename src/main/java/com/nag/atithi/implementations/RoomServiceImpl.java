@@ -2,20 +2,25 @@ package com.nag.atithi.implementations;
 
 import com.nag.atithi.enums.RoomState;
 import com.nag.atithi.enums.RoomStatus;
+import com.nag.atithi.enums.BookingStatus;
 import com.nag.atithi.models.Hotel;
 import com.nag.atithi.models.Room;
 import com.nag.atithi.models.RoomType;
 import com.nag.atithi.repositories.HotelRepository;
 import com.nag.atithi.repositories.RoomRepository;
 import com.nag.atithi.repositories.RoomTypeRepository;
+import com.nag.atithi.repositories.BookingRepository;
 import com.nag.atithi.requests.CheckAvailabilityRequest;
 import com.nag.atithi.requests.CreateRoomRequest;
 import com.nag.atithi.requests.UpdateRoomRequest;
+import com.nag.atithi.responses.OverviewStatsResponse;
 import com.nag.atithi.services.RoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -26,6 +31,7 @@ public class RoomServiceImpl implements RoomService {
     private final RoomRepository roomRepository;
     private final HotelRepository hotelRepository;
     private final RoomTypeRepository roomTypeRepository;
+    private final BookingRepository bookingRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -131,5 +137,27 @@ public class RoomServiceImpl implements RoomService {
             request.getMaxOccupancy(),
             status
         );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OverviewStatsResponse getOverviewStats(Long hotelId) {
+        LocalDate today = LocalDate.now();
+        LocalDateTime start = today.atStartOfDay();
+        LocalDateTime end = today.atTime(LocalTime.MAX);
+
+        long checkIns = bookingRepository.countTodayCheckIns(
+            hotelId, BookingStatus.CANCELLED, start, end
+        );
+
+        long checkOuts = bookingRepository.countTodayCheckOuts(
+            hotelId, BookingStatus.CANCELLED, start, end
+        );
+
+        long totalGuests = bookingRepository.countTotalGuestsInHotel(hotelId);
+
+        long availableRooms = roomRepository.countByHotelIdAndRoomStatus(hotelId, RoomStatus.VACANT);
+
+        return new OverviewStatsResponse(checkIns, checkOuts, totalGuests, availableRooms);
     }
 }

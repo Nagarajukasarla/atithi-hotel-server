@@ -36,7 +36,34 @@ public class PaymentServiceImpl implements PaymentService {
                     .build();
         }
 
-        payment.setPaymentMethod(PaymentMethod.valueOf(request.getPaymentMethod().toUpperCase()));
+        Double cash = request.getCashAmount();
+        Double online = request.getOnlineAmount();
+
+        PaymentMethod method;
+        if (cash != null || online != null) {
+            double c = cash != null ? cash : 0.0;
+            double o = online != null ? online : 0.0;
+            if (c > 0 && o > 0) {
+                method = PaymentMethod.SPLIT;
+            } else if (o > 0) {
+                method = PaymentMethod.ONLINE;
+            } else {
+                method = PaymentMethod.CASH;
+            }
+            payment.setCashAmount(c);
+            payment.setOnlineAmount(o);
+        } else {
+            method = PaymentMethod.valueOf(request.getPaymentMethod().toUpperCase());
+            if (method == PaymentMethod.ONLINE) {
+                payment.setCashAmount(0.0);
+                payment.setOnlineAmount(request.getAmountPaid());
+            } else {
+                payment.setCashAmount(request.getAmountPaid());
+                payment.setOnlineAmount(0.0);
+            }
+        }
+
+        payment.setPaymentMethod(method);
         payment.setTotalAmount(request.getTotalAmount());
         payment.setAmountPaid(request.getAmountPaid());
         payment.setStatus(PaymentStatus.valueOf(request.getStatus().toUpperCase()));

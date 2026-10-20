@@ -40,4 +40,6 @@ public class RoomTypeRequest {
 
     private Boolean isPremium;
     private PremiumType premiumType;
+    private Boolean isHourly;
+    private BigDecimal hourlyPrice;
 }

@@ -19,9 +19,17 @@ public record RoomTypeResponse(
         String status,
         List<String> amenityIds,
         Boolean isPremium,
-        String premiumType
+        String premiumType,
+        Boolean isHourly,
+        BigDecimal hourlyPrice,
+        Integer activeRoomsCount,
+        Integer totalRoomsCount
 ) {
     public static RoomTypeResponse fromEntity(RoomType entity) {
+        return fromEntity(entity, 0, 0);
+    }
+
+    public static RoomTypeResponse fromEntity(RoomType entity, Integer activeRoomsCount, Integer totalRoomsCount) {
         List<String> amenityIds = entity.getAmenities().stream()
                 .map(Amenity::getCode)
                 .collect(Collectors.toList());
@@ -39,7 +47,11 @@ public record RoomTypeResponse(
                 entity.getStatus().name(),
                 amenityIds,
                 entity.getIsPremium(),
-                entity.getPremiumType() != null ? entity.getPremiumType().name() : null
+                entity.getPremiumType() != null ? entity.getPremiumType().name() : null,
+                entity.getIsHourly(),
+                entity.getHourlyPrice(),
+                activeRoomsCount,
+                totalRoomsCount
         );
     }
 }

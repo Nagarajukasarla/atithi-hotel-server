@@ -7,6 +7,7 @@ import com.nag.atithi.requests.CreateRoomRequest;
 import com.nag.atithi.requests.UpdateRoomRequest;
 import com.nag.atithi.responses.ApiResponse;
 import com.nag.atithi.responses.RoomResponse;
+import com.nag.atithi.responses.OverviewStatsResponse;
 import com.nag.atithi.services.RoomService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -88,8 +89,8 @@ public class HotelRoomsController {
 
     @PostMapping("/available")
     public ResponseEntity<ApiResponse<List<RoomResponse>>> checkAvailability(
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
-            @Valid @RequestBody CheckAvailabilityRequest request
+        @AuthenticationPrincipal UserPrincipal userPrincipal,
+        @Valid @RequestBody CheckAvailabilityRequest request
     ) {
         if (userPrincipal == null || userPrincipal.getHotelId() == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -102,5 +103,18 @@ public class HotelRoomsController {
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(ApiResponse.success("Available rooms checked successfully", responses));
+    }
+
+    @GetMapping("/overview-stats")
+    public ResponseEntity<ApiResponse<OverviewStatsResponse>> getOverviewStats(
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        if (userPrincipal == null || userPrincipal.getHotelId() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Not authenticated"));
+        }
+
+        OverviewStatsResponse response = roomService.getOverviewStats(userPrincipal.getHotelId());
+        return ResponseEntity.ok(ApiResponse.success("Overview stats fetched successfully", response));
     }
 }

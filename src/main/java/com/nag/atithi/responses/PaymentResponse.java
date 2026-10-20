@@ -15,6 +15,8 @@ public class PaymentResponse {
     private String paymentMethod;
     private Double totalAmount;
     private Double amountPaid;
+    private Double cashAmount;
+    private Double onlineAmount;
     private String status;
     private String paymentDate;
     private String transactionId;
@@ -28,6 +30,8 @@ public class PaymentResponse {
                 .paymentMethod(payment.getPaymentMethod().name())
                 .totalAmount(payment.getTotalAmount())
                 .amountPaid(payment.getAmountPaid())
+                .cashAmount(payment.getCashAmount())
+                .onlineAmount(payment.getOnlineAmount())
                 .status(payment.getStatus().name())
                 .paymentDate(payment.getPaymentDate() != null ? payment.getPaymentDate().format(formatter) : null)
                 .transactionId(payment.getTransactionId())

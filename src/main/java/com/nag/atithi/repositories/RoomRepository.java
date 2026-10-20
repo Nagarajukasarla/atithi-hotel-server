@@ -16,6 +16,15 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
     boolean existsByHotelIdAndRoomNumber(Long hotelId, String roomNumber);
     Optional<Room> findByIdAndHotelId(Long id, Long hotelId);
 
+    @Query("SELECT r.roomType.id, COUNT(r), " +
+           "SUM(CASE WHEN r.roomStatus <> :vacantStatus THEN 1 ELSE 0 END) " +
+           "FROM Room r WHERE r.hotel.id = :hotelId " +
+           "GROUP BY r.roomType.id")
+    List<Object[]> countRoomsByRoomTypeAndStatus(
+        @Param("hotelId") Long hotelId,
+        @Param("vacantStatus") RoomStatus vacantStatus
+    );
+
     @Query("SELECT r FROM Room r JOIN FETCH r.roomType rt WHERE r.hotel.id = :hotelId " +
            "AND ((:roomTypeName = 'Premium' AND rt.isPremium = true) OR rt.name = :roomTypeName) " +
            "AND r.capacity >= :capacity AND r.roomStatus = :roomStatus")
@@ -25,4 +34,6 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
         @Param("capacity") Integer capacity,
         @Param("roomStatus") RoomStatus roomStatus
     );
+
+    long countByHotelIdAndRoomStatus(Long hotelId, RoomStatus roomStatus);
 }

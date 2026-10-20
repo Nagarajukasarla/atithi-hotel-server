@@ -1,0 +1,128 @@
+name: CD Pipeline - AWS ECS Fargate
+
+# =============================================================================
+# WORKFLOW TRIGGER CONFIGURATION
+# =============================================================================
+# Stage 1: GitHub Trigger
+# This workflow runs automatically when code is pushed to the 'main' or 'master' branch,
+# or can be manually triggered from GitHub Actions tab.
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+# Global Environment Variables
+env:
+  AWS_REGION: us-east-1                         # AWS Region where resources reside
+  ECR_REPOSITORY: atithi-server                 # Amazon ECR Repository Name
+  ECS_CLUSTER: atithi-server-production-cluster # AWS ECS Cluster Name
+  ECS_SERVICE: atithi-server-production-service # AWS ECS Service Name
+
+jobs:
+  deploy:
+    name: Continuous Deployment (Docker Hub Backup, ECR & ECS Fargate)
+    runs-on: ubuntu-latest
+
+    steps:
+      # =======================================================================
+      # STAGE 1: GITHUB (Repository Checkout)
+      # =======================================================================
+      # Explanation: Pulls the latest backend source code from GitHub repository 
+      # onto the GitHub Actions virtual runner environment.
+      - name: "Stage 1: [GitHub] Checkout repository code"
+        uses: actions/checkout@v4
+
+      # =======================================================================
+      # STAGE 2: GITHUB ACTIONS (AWS IAM Authentication & ECR Login)
+      # =======================================================================
+      # Explanation 2a: Configures AWS CLI credentials using IAM keys stored in 
+      # GitHub Repository Secrets (AWS_ACCESS_KEY_ID & AWS_SECRET_ACCESS_KEY).
+      - name: "Stage 2a: [GitHub Actions] Configure AWS Credentials"
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Explanation 2b: Authenticates the local Docker engine on the runner with 
+      # Amazon Elastic Container Registry (ECR).
+      - name: "Stage 2b: [GitHub Actions] Log in to Amazon ECR"
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # =======================================================================
+      # STAGE 3: DOCKER IMAGE (Build Docker Image for ECR & Docker Hub)
+      # =======================================================================
+      # Explanation: Runs 'docker build' to package the application into a 
+      # container image, tagging it upfront for both Amazon ECR and Docker Hub 
+      # with the Git commit SHA and 'latest'.
+      - name: "Stage 3: [Docker Image] Build container image"
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "=========================================================="
+          echo "Building Docker image for ECR & Docker Hub (tag: $IMAGE_TAG)"
+          echo "=========================================================="
+          docker build \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            -t ${{ secrets.DOCKER_USERNAME }}/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t ${{ secrets.DOCKER_USERNAME }}/$ECR_REPOSITORY:latest \
+            .
+
+      # =======================================================================
+      # STAGE 3b: DOCKER HUB BACKUP (Push to Docker Hub Repository)
+      # =======================================================================
+      # Explanation: Logs in to Docker Hub using secrets (DOCKER_USERNAME & 
+      # DOCKER_PASSWORD) and directly pushes the pre-tagged image as a secondary 
+      # backup in case of AWS service downtime.
+      - name: "Stage 3b: [Docker Hub Backup] Log in to Docker Hub"
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: "Stage 3b: [Docker Hub Backup] Push Docker image to Docker Hub"
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "=========================================================="
+          echo "Pushing backup image directly to Docker Hub..."
+          echo "=========================================================="
+          docker push ${{ secrets.DOCKER_USERNAME }}/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push ${{ secrets.DOCKER_USERNAME }}/$ECR_REPOSITORY:latest
+
+      # =======================================================================
+      # STAGE 4: AMAZON ECR (Push Docker Image)
+      # =======================================================================
+      # Explanation: Runs 'docker push' to upload the container images from the 
+      # GitHub Actions runner directly into Amazon Elastic Container Registry (ECR).
+      - name: "Stage 4: [Amazon ECR] Push Docker image to ECR registry"
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "=========================================================="
+          echo "Pushing Docker image to Amazon ECR repository: $ECR_REPOSITORY"
+          echo "=========================================================="
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      # =======================================================================
+      # STAGE 5: AWS ECS / FARGATE (Deploy to Container Service)
+      # =======================================================================
+      # Explanation: Triggers AWS ECS to update the running Fargate service. 
+      # Fargate pulls the newly pushed image from ECR and performs a rolling, 
+      # zero-downtime deployment of the backend service.
+      - name: "Stage 5: [ECS / Fargate] Force new deployment on ECS Cluster"
+        run: |
+          echo "=========================================================="
+          echo "Deploying to AWS ECS Fargate Cluster: $ECS_CLUSTER"
+          echo "Updating Service: $ECS_SERVICE"
+          echo "=========================================================="
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ env.ECS_SERVICE }} \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}

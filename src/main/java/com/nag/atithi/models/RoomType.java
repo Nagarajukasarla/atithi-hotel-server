@@ -62,6 +62,13 @@ public class RoomType extends BaseEntity {
     @Column(name = "premium_type", length = 20)
     private PremiumType premiumType;
 
+    @Column(name = "is_hourly", nullable = false, columnDefinition = "boolean default false")
+    @Builder.Default
+    private Boolean isHourly = false;
+
+    @Column(name = "hourly_price", precision = 12, scale = 2)
+    private BigDecimal hourlyPrice;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "room_type_amenities",
